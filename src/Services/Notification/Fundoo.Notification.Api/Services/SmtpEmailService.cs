@@ -91,6 +91,45 @@ public sealed class SmtpEmailService(IConfiguration configuration) : INotificati
         }
     }
 
+    public async Task SendLoginOtpNotificationAsync(
+    LoginOtpNotificationRequest request)
+    {
+        var recipientName = System.Net.WebUtility.HtmlEncode(
+            string.IsNullOrWhiteSpace(request.RecipientName)
+                ? "User"
+                : request.RecipientName);
+
+        var otp = System.Net.WebUtility.HtmlEncode(request.Otp);
+
+        var expiryTime = request.ExpiresAtUtc.ToString(
+            "dd MMM yyyy, hh:mm tt 'UTC'");
+
+        var body = $"""
+        <html>
+        <body>
+            <h2>Fundoo Notes - Login Verification</h2>
+
+            <p>Hello {recipientName},</p>
+
+            <p>Your login verification OTP is:</p>
+
+            <h1 style="letter-spacing: 8px;">{otp}</h1>
+
+            <p>This OTP expires at {expiryTime}.</p>
+
+            <p>Please do not share this OTP with anyone.</p>
+
+            <p>If you did not attempt to log in, you can ignore this email.</p>
+        </body>
+        </html>
+        """;
+
+        await SendEmailAsync(
+            request.RecipientEmail,
+            "Fundoo Notes - Login Verification OTP",
+            body);
+    }
+
     private string GetRequiredSetting(string key)
     {
         return configuration[$"EmailSettings:{key}"]

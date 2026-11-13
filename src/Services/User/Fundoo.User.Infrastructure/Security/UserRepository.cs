@@ -92,5 +92,42 @@ namespace Fundoo.User.Infrastructure.Security
 
             await _context.SaveChangesAsync(cancellationToken);
         }
+
+        public async Task AddLoginOtpChallengeAsync(
+    LoginOtpChallenge challenge,
+    CancellationToken cancellationToken = default)
+        {
+            await _context.LoginOtpChallenges.AddAsync(
+                challenge,
+                cancellationToken);
+        }
+
+        public async Task<LoginOtpChallenge?> GetLoginOtpChallengeByIdAsync(
+            Guid challengeId,
+            CancellationToken cancellationToken = default)
+        {
+            return await _context.LoginOtpChallenges
+                .FirstOrDefaultAsync(
+                    challenge => challenge.Id == challengeId,
+                    cancellationToken);
+        }
+
+        public async Task InvalidateLoginOtpChallengesAsync(
+            Guid userId,
+            DateTime usedAtUtc,
+            CancellationToken cancellationToken = default)
+        {
+            var challenges = await _context.LoginOtpChallenges
+                .Where(challenge =>
+                    challenge.UserId == userId &&
+                    !challenge.IsUsed)
+                .ToListAsync(cancellationToken);
+
+            foreach (var challenge in challenges)
+            {
+                challenge.IsUsed = true;
+                challenge.UsedAtUtc = usedAtUtc;
+            }
+        }
     }
 }

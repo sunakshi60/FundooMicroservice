@@ -24,5 +24,18 @@ namespace Fundoo.User.Application.Abstractions
         Task UpdatePasswordAsync(AppUser user, string passwordHash,
             DateTime updatedAtUtc,
             CancellationToken cancellationToken = default);
+
+        Task AddLoginOtpChallengeAsync(
+            LoginOtpChallenge challenge,
+            CancellationToken cancellationToken = default);
+
+        Task<LoginOtpChallenge?> GetLoginOtpChallengeByIdAsync(
+            Guid challengeId,
+            CancellationToken cancellationToken = default);
+
+        Task InvalidateLoginOtpChallengesAsync(
+            Guid userId,
+            DateTime usedAtUtc,
+            CancellationToken cancellationToken = default);
     }
 }

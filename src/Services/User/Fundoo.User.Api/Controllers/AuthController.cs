@@ -194,8 +194,8 @@ namespace Fundoo.User.Api.Controllers
 
         [HttpPost("register")]
         public async Task<IActionResult> Register(
-    [FromBody] RegisterRequest request,
-    CancellationToken cancellationToken)
+            [FromBody] RegisterRequest request,
+            CancellationToken cancellationToken)
         {
             // Step 1: Validate registration request
             var validationResult = await _registerValidator.ValidateAsync(
@@ -244,8 +244,10 @@ namespace Fundoo.User.Api.Controllers
             });
         }
 
+        [AllowAnonymous]
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequest request,
+        public async Task<IActionResult> Login(
+            [FromBody] LoginRequest request,
             CancellationToken cancellationToken)
         {
             var result = await _authService.LoginAsync(
@@ -266,9 +268,38 @@ namespace Fundoo.User.Api.Controllers
             {
                 isSuccess = true,
                 message = result.Message,
+                requiresTwoFactor = result.RequiresTwoFactor,
+                challengeId = result.ChallengeId
+            });
+        }
+
+        [AllowAnonymous]
+        [HttpPost("verify-otp")]
+        public async Task<IActionResult> VerifyOtp(
+            [FromBody] OtpVerificationRequest request,
+            CancellationToken cancellationToken)
+        {
+            var result = await _authService.VerifyLoginOtpAsync(
+                request.ChallengeId,
+                request.Otp,
+                cancellationToken);
+
+            if (!result.IsSuccess)
+            {
+                return Unauthorized(new
+                {
+                    isSuccess = false,
+                    message = result.Message
+                });
+            }
+
+            return Ok(new
+            {
+                isSuccess = true,
+                message = result.Message,
                 userId = result.UserId,
                 accessToken = result.AccessToken,
-                tokenType = "Bearer",
+                tokenType = "Bearer"
             });
         }
 

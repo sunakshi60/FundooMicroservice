@@ -60,5 +60,42 @@ namespace Fundoo.User.Infrastructure.Messaging
                 throw;
             }
         }
+
+        public async Task PublishLoginOtpAsync(
+    LoginOtpRequested loginOtpEvent,
+    CancellationToken cancellationToken = default)
+        {
+            var topic = _configuration["Kafka:NotificationTopic"]
+                        ?? "fundoo-notifications";
+
+            var message = new Message<string, string>
+            {
+                Key = loginOtpEvent.EventId,
+                Value = JsonSerializer.Serialize(loginOtpEvent)
+            };
+
+            try
+            {
+                var result = await _producer.ProduceAsync(
+                    topic,
+                    message,
+                    cancellationToken);
+
+                _logger.LogInformation(
+                    "Login OTP event {EventId} published to topic {Topic}, partition {Partition}",
+                    loginOtpEvent.EventId,
+                    topic,
+                    result.Partition);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Failed to publish login OTP event {EventId}",
+                    loginOtpEvent.EventId);
+
+                throw;
+            }
+        }
     }
 }

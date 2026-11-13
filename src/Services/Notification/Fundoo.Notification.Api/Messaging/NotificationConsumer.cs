@@ -1,5 +1,4 @@
 ﻿using Confluent.Kafka;
-using Fundoo.Notification.Application;
 using Fundoo.Notification.Application.Abstractions;
 using Fundoo.Notification.Application.DTO;
 using Fundoo.User.Infrastructure.Messaging;
@@ -58,41 +57,77 @@ namespace Fundoo.Notification.Api.Messaging
                 {
                     var result = consumer.Consume(stoppingToken);
 
-                    var message = JsonSerializer.Deserialize<PasswordResetRequestedMessage>(
-                            result.Message.Value);
+                    using var document =
+                        JsonDocument.Parse(result.Message.Value);
 
-                    if (message == null)
+                    var root = document.RootElement;
+
+                    if (root.TryGetProperty("Otp", out _))
                     {
-                        _logger.LogWarning(
-                            "Received an empty or invalid notification event.");
+                        var message =
+                            JsonSerializer.Deserialize<LoginOtpRequestedMessage>(
+                                result.Message.Value);
+
+                        if (message == null)
+                        {
+                            _logger.LogWarning(
+                                "Invalid login OTP event received.");
+
+                            consumer.Commit(result);
+                            continue;
+                        }
+
+                        await _notificationService.SendLoginOtpNotificationAsync(
+                            new LoginOtpNotificationRequest
+                            {
+                                RecipientEmail = message.Email,
+                                RecipientName = message.UserName,
+                                Otp = message.Otp,
+                                ExpiresAtUtc = message.ExpiresAtUtc
+                            });
 
                         consumer.Commit(result);
-                        continue;
+
+                        _logger.LogInformation(
+                            "Login OTP email processed for event {EventId}",
+                            message.EventId);
                     }
-
-                    _logger.LogInformation(
-                        "Received password reset event {EventId}",
-                        message.EventId);
-
-                    // Call your existing email service.
-
-                    var notificationRequest = new PasswordResetNotificationRequest
+                    else if (root.TryGetProperty("ResetToken", out _))
                     {
-                        RecipientEmail = message.Email,
-                        RecipientName = message.UserName,
-                        ResetToken = message.ResetToken
-                    };
+                        var message =
+                            JsonSerializer.Deserialize<PasswordResetRequestedMessage>(
+                                result.Message.Value);
 
-                    await _notificationService.SendPasswordResetNotificationAsync(
-                        notificationRequest);
+                        if (message == null)
+                        {
+                            _logger.LogWarning(
+                                "Invalid password reset event received.");
 
+                            consumer.Commit(result);
+                            continue;
+                        }
 
-                    // Commit only after email service succeeds.
-                    consumer.Commit(result);
+                        await _notificationService.SendPasswordResetNotificationAsync(
+                            new PasswordResetNotificationRequest
+                            {
+                                RecipientEmail = message.Email,
+                                RecipientName = message.UserName,
+                                ResetToken = message.ResetToken
+                            });
 
-                    _logger.LogInformation(
-                        "Password reset email processed for event {EventId}",
-                        message.EventId);
+                        consumer.Commit(result);
+
+                        _logger.LogInformation(
+                            "Password reset email processed for event {EventId}",
+                            message.EventId);
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "Unknown notification event received.");
+
+                        consumer.Commit(result);
+                    }
                 }
             }
             catch (OperationCanceledException)

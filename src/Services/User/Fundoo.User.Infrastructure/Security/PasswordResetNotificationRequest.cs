@@ -1,5 +1,4 @@
-﻿
-namespace Fundoo.User.Infrastructure.Security
+﻿namespace Fundoo.User.Infrastructure.Security
 {
     public sealed class PasswordResetNotificationRequest
     {

@@ -22,6 +22,12 @@ namespace Fundoo.User.Application.Abstractions
         Task<AuthResult> GoogleLoginAsync(string email,
             CancellationToken cancellationToken = default);
 
+
+        Task<AuthResult> VerifyLoginOtpAsync(
+            Guid challengeId,
+            string otp,
+            CancellationToken cancellationToken = default);
+
     }
     public class AuthResult
     {
@@ -32,5 +38,11 @@ namespace Fundoo.User.Application.Abstractions
         public Guid? UserId { get; init; }
 
         public string? AccessToken { get; init; }
+
+        //Indicates that the user must verify an OTP.
+        public bool RequiresTwoFactor { get; init; }
+
+        //Identifies the OTP challenge stored in the database.
+        public Guid? ChallengeId { get; init; }
     }
 }

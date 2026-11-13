@@ -7,5 +7,7 @@ namespace Fundoo.Notification.Application.Abstractions
         Task SendPasswordResetNotificationAsync(PasswordResetNotificationRequest request);
 
         Task SendWelcomeNotificationAsync(WelcomeNotificationRequest request);
+
+        Task SendLoginOtpNotificationAsync(LoginOtpNotificationRequest request);
     }
 }

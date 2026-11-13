@@ -1,5 +1,7 @@
 <Solution>
-  <Folder Name="/src/" />
+  <Folder Name="/src/">
+    <File Path="docker-compose.kafka.yml" />
+  </Folder>
   <Folder Name="/src/ApiGateway/">
     <Project Path="src/ApiGateway/Fundoo.ApiGateway/Fundoo.ApiGateway.csproj" />
   </Folder>

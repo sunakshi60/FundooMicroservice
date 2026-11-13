@@ -1,9 +1,8 @@
 ﻿using Fundoo.User.Application.Abstractions;
+using Fundoo.User.Application.Events;
 using Fundoo.User.Domain.Entity;
+using Fundoo.User.Infrastructure.Messaging;
 using Microsoft.Extensions.Logging;
-using Polly.RateLimit;
-using Polly.Timeout;
-using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -14,15 +13,15 @@ namespace Fundoo.User.Infrastructure.Security
         private readonly IUserRepository _userRepository;
         private readonly IPasswordHasher _passwordHasher;
         private readonly ITokenService _tokenService;
-        private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<AuthService> _logger;
+        private readonly KafkaProducer _kafkaProducer;
 
-        public AuthService(IUserRepository userRepository, IPasswordHasher passwordHasher, ITokenService tokenService, IHttpClientFactory httpClientFactory, ILogger<AuthService> logger)
+        public AuthService(IUserRepository userRepository, IPasswordHasher passwordHasher, ITokenService tokenService, KafkaProducer kafkaProducer, ILogger<AuthService> logger)
         {
             _userRepository = userRepository;
             _passwordHasher = passwordHasher;
             _tokenService = tokenService;
-            _httpClientFactory = httpClientFactory;
+            _kafkaProducer = kafkaProducer;
             _logger = logger;
         }
 
@@ -143,78 +142,42 @@ namespace Fundoo.User.Infrastructure.Security
 
             await _userRepository.SaveChangesAsync(cancellationToken);
 
+
             try
             {
-                var httpClient = _httpClientFactory.CreateClient("NotificationService");
-
-                var notificationRequest = new PasswordResetNotificationRequest
+                var passwordResetEvent = new PasswordResetRequested
                 {
-                    RecipientEmail = user.Email,
-                    RecipientName = user.FirstName,
-                    ResetToken = rawToken
+                    EventId = Guid.NewGuid().ToString(),
+                    UserId = user.Id.ToString(),
+                    Email = user.Email,
+                    UserName = $"{user.FirstName} {user.LastName}".Trim(),
+                    ResetToken = rawToken,
+                    RequestedAtUtc = DateTime.UtcNow
                 };
 
-                using var response = await httpClient.PostAsJsonAsync(
-                    "api/notifications/password-reset",
-                    notificationRequest,
+                await _kafkaProducer.PublishPasswordResetAsync(
+                    passwordResetEvent,
                     cancellationToken);
 
                 _logger.LogInformation(
-                    "Notification API returned HTTP {StatusCode} for user {UserId}.",
-                    (int)response.StatusCode, user.Id);
+                    "Password reset event published for user {UserId}.",
+                    user.Id);
+            }
+            catch (OperationCanceledException)
+                when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(
+                    ex,
+                    "Failed to publish password reset event for user {UserId}.",
+                    user.Id);
+            }
 
-                if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
-                {
-                    _logger.LogWarning(
-                        "Notification API rate limit reached for user {UserId}. " +
-                        "The password-reset email was not accepted.",
-                        user.Id);
-                }
-                else if (!response.IsSuccessStatusCode)
-                {
-                    _logger.LogError(
-                        "Notification API returned HTTP {StatusCode} for user {UserId}.",
-                        (int)response.StatusCode,
-                        user.Id);
-                }
-                else
-                {
-                    _logger.LogInformation(
-                        "Password-reset notification accepted by Notification API for user {UserId}.",
-                        user.Id);
-                }
-            }
-            catch (TimeoutRejectedException ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Notification API timed out while sending a password-reset email for user {UserId}.",
-                    user.Id);
-            }
-            catch (HttpRequestException ex)
-            {
-                _logger.LogError(
-                    ex,
-                    "Could not communicate with Notification API for user {UserId}.",
-                    user.Id);
-            }
-            catch (RateLimitRejectedException ex)
-            {
-                _logger.LogWarning(
-                    ex,
-                    "Notification call rejected by the outbound concurrency limiter " +
-                    "for user {UserId}.",
-                    user.Id);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                _logger.LogError(
-                    ex,
-                    "Unexpected error while sending a password-reset email for user {UserId}.",
-                    user.Id);
-            }
         }
-           
+
         public async Task<bool> ResetPasswordAsync(string email, string token, string newPassword,
             CancellationToken cancellationToken = default)
         {

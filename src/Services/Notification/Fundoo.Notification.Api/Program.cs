@@ -1,3 +1,4 @@
+using Fundoo.Notification.Api.Messaging;
 using Fundoo.Notification.Api.Services;
 using Fundoo.Notification.Application.Abstractions;
 using Microsoft.AspNetCore.RateLimiting;
@@ -22,6 +23,9 @@ builder.Services.AddSwaggerGen(options =>
             Description = "API for sending Fundoo email notifications"
         });
 });
+
+//consumer registration
+builder.Services.AddHostedService<NotificationConsumer>();
 
 // Register Notification Service.
 builder.Services.AddTransient<INotificationService, SmtpEmailService>();

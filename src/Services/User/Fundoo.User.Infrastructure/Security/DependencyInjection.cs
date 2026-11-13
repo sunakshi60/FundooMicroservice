@@ -1,8 +1,8 @@
 ﻿using Fundoo.User.Application.Abstractions;
+using Fundoo.User.Infrastructure.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 
 namespace Fundoo.User.Infrastructure.Security
 {
@@ -19,7 +19,7 @@ namespace Fundoo.User.Infrastructure.Security
                 options.UseNpgsql(connectionString);
                 options.UseOpenIddict();
             });
-
+            services.AddSingleton<KafkaProducer>();
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
             services.AddScoped<ITokenService, JwtTokenService>();

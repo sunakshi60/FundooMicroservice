@@ -9,9 +9,7 @@ namespace Fundoo.Notification.Application.Templates
 {
     public static class PasswordResetEmailTemplate
     {
-        public static string Build(
-            string recipientName,
-            string resetToken)
+        public static string Build(string recipientName, string resetToken)
         {
             var safeName = WebUtility.HtmlEncode(recipientName);
             var safeToken = WebUtility.HtmlEncode(resetToken);

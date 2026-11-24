@@ -13,3 +13,17 @@
 
 # Secrets and local configuration
 appsettings.Development.json
+
+# Backup and temporary files
+*.bak
+*.tmp
+*.Backup.tmp
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Incomplete or sensitive Kubernetes manifests
+/databases.yaml
+/fundoo-live-k8s.yaml

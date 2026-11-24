@@ -1,0 +1,31 @@
+# Git
+.git/
+.gitignore
+
+# IDE files
+.vs/
+.idea/
+
+# Build outputs
+**/bin/
+**/obj/
+
+# Local configuration and secrets
+**/appsettings.Development.json
+.env
+.env.*
+!.env.example
+
+# User-specific files
+*.user
+*.suo
+*.slnLaunch.user
+
+# Backup and temporary files
+*.bak
+*.tmp
+
+# Kubernetes manifests (not required inside application images)
+databases.yaml
+fundoo-live-k8s.yaml
+kafka-k8s.yaml

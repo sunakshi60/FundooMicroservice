@@ -125,6 +125,27 @@ app.Use(async (context, next) =>
 // Apply ASP.NET Core rate limiter
 //app.UseRateLimiter();
 
+// Configure Swagger UI for all microservices
+app.UseSwaggerUI(options =>
+{
+    options.RoutePrefix = "swagger";
+
+    options.UseRequestInterceptor(
+      "(req) => { req.headers['ClientId'] = 'swagger-ui'; return req; }");
+
+    options.SwaggerEndpoint(
+        "/swagger-docs/user/v1/swagger.json",
+        "Fundoo User API v1");
+
+    options.SwaggerEndpoint(
+        "/swagger-docs/user/v2/swagger.json",
+        "Fundoo User API v2");
+
+    options.SwaggerEndpoint(
+        "/swagger-docs/notes/v1/swagger.json",
+        "Fundoo Notes API v1");
+});
+
 // Forward requests through Ocelot
 await app.UseOcelot();
 

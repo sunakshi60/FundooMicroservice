@@ -32,6 +32,7 @@ builder.Services.AddHealthChecks()
         timeout: TimeSpan.FromSeconds(3)
     );
 
+
 // Add services to the container.
 builder.Services.AddControllers();
 
@@ -272,7 +273,8 @@ builder.Services
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() ||
+    builder.Configuration.GetValue<bool>("Swagger:Enabled") )
 {
     app.UseSwagger();
 

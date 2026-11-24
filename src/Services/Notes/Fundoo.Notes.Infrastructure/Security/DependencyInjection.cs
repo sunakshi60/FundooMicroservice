@@ -1,4 +1,5 @@
-﻿using Fundoo.Notes.Application.Interfaces;
+﻿
+using Fundoo.Notes.Application.Interfaces;
 using Fundoo.Notes.Application.Repositories;
 using Fundoo.Notes.Application.Services;
 using Fundoo.Notes.Infrastructure.Data;
@@ -10,11 +11,30 @@ namespace Fundoo.Notes.Infrastructure
 {
     public static class DependencyInjection
     {
-        public static IServiceCollection AddNotesInfrastructure(this IServiceCollection services,
+        public static IServiceCollection AddNotesInfrastructure(
+            this IServiceCollection services,
             IConfiguration configuration)
         {
             // Database connection factory
             services.AddSingleton<NotesDbConnectionFactory>();
+
+            // Redis Cache
+            var redisConnectionString =
+                configuration.GetConnectionString("Redis");
+
+            if (!string.IsNullOrWhiteSpace(redisConnectionString))
+            {
+                services.AddStackExchangeRedisCache(options =>
+                {
+                    options.Configuration = redisConnectionString;
+                    options.InstanceName = "FundooNotes:";
+                });
+            }
+            else
+            {
+                // Local fallback when Redis connection is not configured
+                services.AddDistributedMemoryCache();
+            }
 
             // Note Repository
             services.AddScoped<INotesRepository, NotesRepository>();

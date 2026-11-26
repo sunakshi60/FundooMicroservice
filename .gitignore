@@ -27,3 +27,7 @@ appsettings.Development.json
 # Incomplete or sensitive Kubernetes manifests
 /databases.yaml
 /fundoo-live-k8s.yaml
+
+# Generated SigNoz Foundry deployment files
+/observability/pours/
+/observability/casting.yaml.lock

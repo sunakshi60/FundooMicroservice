@@ -11,8 +11,14 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Fundoo.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddFundooObservability(
+    builder.Configuration,
+    builder.Environment,
+    "fundoo-user-api");
+
 
 var userConnectionString = builder.Configuration.GetConnectionString("UserDb")
     ?? throw new InvalidOperationException("UserConnnectionstring is missing");

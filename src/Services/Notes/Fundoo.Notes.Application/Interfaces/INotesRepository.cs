@@ -19,5 +19,11 @@ namespace Fundoo.Notes.Application.Interfaces
         Task<bool> UpdateAsync(Note note, CancellationToken cancellationToken = default);
 
         Task<bool> DeleteAsync(Guid noteId, Guid userId, CancellationToken cancellationToken = default);
+
+        Task<bool?> AddCollaboratorAsync(Guid noteId, Guid ownerUserId, Guid collaboratorUserId, CancellationToken cancellationToken = default);
+
+        Task<IReadOnlyList<Guid>?> GetCollaboratorsAsync(Guid noteId, Guid ownerUserId, CancellationToken cancellationToken = default);
+
+        Task<bool> RemoveCollaboratorAsync(Guid noteId, Guid ownerUserId, Guid collaboratorUserId, CancellationToken cancellationToken = default);
     }
 }

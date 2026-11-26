@@ -1,13 +1,14 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\Fundoo.Observability\Fundoo.Observability.csproj" />
     <ProjectReference Include="..\Fundoo.User.Application\Fundoo.User.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
     <PackageReference Include="Confluent.Kafka" Version="2.16.0" />
-    <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="8.0.23" />
+    <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="8.0.34" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.1" />
     <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.23.0" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.11" />

@@ -1,5 +1,7 @@
 ﻿using System.Text.Json;
 using Confluent.Kafka;
+using Fundoo.Observability;
+using System.Text;
 using Fundoo.User.Application.Events;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -30,12 +32,18 @@ namespace Fundoo.User.Infrastructure.Messaging
         {
             var topic = _configuration["Kafka:NotificationTopic"]
                         ?? "fundoo-notifications";
+            using var activity = FundooObservability.StartKafkaPublish(topic);
 
             var message = new Message<string, string>
             {
                 Key = passwordResetEvent.EventId,
-                Value = JsonSerializer.Serialize(passwordResetEvent)
+                Value = JsonSerializer.Serialize(passwordResetEvent),
+                Headers = new Headers()
             };
+            FundooObservability.InjectTraceContext(
+                activity,
+                message.Headers,
+                static (headers, key, value) => headers.Add(key, Encoding.UTF8.GetBytes(value)));
 
             try
             {
@@ -52,6 +60,7 @@ namespace Fundoo.User.Infrastructure.Messaging
             }
             catch (Exception ex)
             {
+                FundooObservability.RecordFailure(activity, ex);
                 _logger.LogError(
                     ex,
                     "Failed to publish password reset event {EventId}",
@@ -67,12 +76,18 @@ namespace Fundoo.User.Infrastructure.Messaging
         {
             var topic = _configuration["Kafka:NotificationTopic"]
                         ?? "fundoo-notifications";
+            using var activity = FundooObservability.StartKafkaPublish(topic);
 
             var message = new Message<string, string>
             {
                 Key = loginOtpEvent.EventId,
-                Value = JsonSerializer.Serialize(loginOtpEvent)
+                Value = JsonSerializer.Serialize(loginOtpEvent),
+                Headers = new Headers()
             };
+            FundooObservability.InjectTraceContext(
+                activity,
+                message.Headers,
+                static (headers, key, value) => headers.Add(key, Encoding.UTF8.GetBytes(value)));
 
             try
             {
@@ -89,6 +104,7 @@ namespace Fundoo.User.Infrastructure.Messaging
             }
             catch (Exception ex)
             {
+                FundooObservability.RecordFailure(activity, ex);
                 _logger.LogError(
                     ex,
                     "Failed to publish login OTP event {EventId}",

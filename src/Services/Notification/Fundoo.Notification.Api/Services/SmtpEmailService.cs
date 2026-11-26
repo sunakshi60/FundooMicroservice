@@ -4,6 +4,7 @@ using MailKit.Net.Smtp;
 using MailKit.Security;
 using MimeKit;
 using Fundoo.Notification.Application.Abstractions;
+using Fundoo.Observability;
 
 namespace Fundoo.Notification.Api.Services;
 
@@ -39,6 +40,9 @@ public sealed class SmtpEmailService(IConfiguration configuration) : INotificati
         string subject,
         string body)
     {
+        using var activity = FundooObservability.StartSmtpSend();
+        try
+        {
         var host = GetRequiredSetting("Host");
 
         if (!int.TryParse(
@@ -88,6 +92,12 @@ public sealed class SmtpEmailService(IConfiguration configuration) : INotificati
             {
                 await client.DisconnectAsync(true);
             }
+        }
+        }
+        catch (Exception exception)
+        {
+            FundooObservability.RecordFailure(activity, exception);
+            throw;
         }
     }
 

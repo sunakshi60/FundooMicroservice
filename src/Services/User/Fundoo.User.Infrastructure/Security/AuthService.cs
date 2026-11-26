@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Configuration;
+using Fundoo.Observability;
 
 namespace Fundoo.User.Infrastructure.Security
 {
@@ -80,14 +81,22 @@ namespace Fundoo.User.Infrastructure.Security
             // STEP 1: Find user using normalized email.
             var normalizedEmail = email.Trim().ToUpperInvariant();
 
-            var user = await _userRepository.GetByNormalizedEmailAsync(
-                normalizedEmail,
-                cancellationToken);
+            //var user = await _userRepository.GetByNormalizedEmailAsync(
+            //    normalizedEmail,
+            //    cancellationToken);
+
+            AppUser? user;
+
+            using (FundooObservability.StartUserLookup())
+            {
+                user = await _userRepository.GetByNormalizedEmailAsync(
+                    normalizedEmail,
+                    cancellationToken);
+            }
+
 
             // STEP 2: Verify credentials.
-            if (user is null ||
-                !user.IsActive ||
-                !_passwordHasher.Verify(password, user.PasswordHash))
+            if (user is null || !user.IsActive)
             {
                 return new AuthResult
                 {
@@ -95,6 +104,25 @@ namespace Fundoo.User.Infrastructure.Security
                     Message = "Invalid email or password."
                 };
             }
+
+            bool isPasswordValid;
+
+            using (FundooObservability.StartPasswordVerify())
+            {
+                isPasswordValid = _passwordHasher.Verify(
+                    password,
+                    user.PasswordHash);
+            }
+
+            if (!isPasswordValid)
+            {
+                return new AuthResult
+                {
+                    IsSuccess = false,
+                    Message = "Invalid email or password."
+                };
+            }
+
 
             // STEP 3: Generate cryptographically secure six-digit OTP.
             var otp = RandomNumberGenerator.GetInt32(0, 1_000_000)

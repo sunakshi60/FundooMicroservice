@@ -5,6 +5,8 @@ using Fundoo.User.Infrastructure.Messaging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using System.Text;
+using Fundoo.Observability;
 
 namespace Fundoo.Notification.Api.Messaging
 {
@@ -27,6 +29,8 @@ namespace Fundoo.Notification.Api.Messaging
         protected override async Task ExecuteAsync(
             CancellationToken stoppingToken)
         {
+            await Task.Yield();
+
             var config = new ConsumerConfig
             {
                 BootstrapServers =
@@ -56,6 +60,18 @@ namespace Fundoo.Notification.Api.Messaging
                 while (!stoppingToken.IsCancellationRequested)
                 {
                     var result = consumer.Consume(stoppingToken);
+
+                    var parentContext = FundooObservability.ExtractTraceContext(
+                        result.Message.Headers,
+                        static (headers, key) => headers is null
+                            ? Enumerable.Empty<string>()
+                            : headers
+                                .Where(header => string.Equals(header.Key, key, StringComparison.OrdinalIgnoreCase))
+                                .Select(header => Encoding.UTF8.GetString(header.GetValueBytes())));
+                    using var activity = FundooObservability.StartKafkaProcess(topic, parentContext);
+
+                    try
+                    {
 
                     using var document =
                         JsonDocument.Parse(result.Message.Value);
@@ -127,6 +143,12 @@ namespace Fundoo.Notification.Api.Messaging
                             "Unknown notification event received.");
 
                         consumer.Commit(result);
+                    }
+                    }
+                    catch (Exception exception)
+                    {
+                        FundooObservability.RecordFailure(activity, exception);
+                        throw;
                     }
                 }
             }

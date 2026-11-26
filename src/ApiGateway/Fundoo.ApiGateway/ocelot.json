@@ -1,4 +1,121 @@
 
+//{
+//  "Routes": [
+//    {
+//      "Key": "user-auth-route",
+//      "UpstreamPathTemplate": "/api/v{version}/auth/{everything}",
+//      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ],
+//      "DownstreamPathTemplate": "/api/v{version}/auth/{everything}",
+//      "DownstreamScheme": "http",
+//      "DownstreamHostAndPorts": [
+//        {
+//          "Host": "user-service",
+//          "Port": 80
+//        }
+//      ],
+//      "RateLimitOptions": {
+//        "EnableRateLimiting": true,
+//        "Period": "1m",
+//        "Limit": 5,
+//        "Wait": "1m"
+//      }
+//    },
+//    {
+//      "Key": "notes-route",
+//      "UpstreamPathTemplate": "/api/notes/{everything}",
+//      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ],
+//      "DownstreamPathTemplate": "/api/notes/{everything}",
+//      "DownstreamScheme": "http",
+//      "DownstreamHostAndPorts": [
+//        {
+//          "Host": "notes-service",
+//          "Port": 80
+//        }
+//      ],
+//      "RateLimitOptions": {
+//        "EnableRateLimiting": true,
+//        "Period": "1m",
+//        "Limit": 20,
+//        "Wait": "1m"
+//      }
+//    },
+//    {
+//      "Key": "labels-route",
+//      "UpstreamPathTemplate": "/api/labels/{everything}",
+//      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ],
+//      "DownstreamPathTemplate": "/api/labels/{everything}",
+//      "DownstreamScheme": "http",
+//      "DownstreamHostAndPorts": [
+//        {
+//          "Host": "notes-service",
+//          "Port": 80
+//        }
+//      ],
+//      "RateLimitOptions": {
+//        "EnableRateLimiting": true,
+//        "Period": "1m",
+//        "Limit": 5,
+//        "Wait": "1m"
+//      }
+//    },
+//    {
+//      "Key": "user-swagger-v1",
+//      "UpstreamPathTemplate": "/swagger-docs/user/v1/swagger.json",
+//      "UpstreamHttpMethod": [ "GET" ],
+//      "DownstreamPathTemplate": "/swagger/v1/swagger.json",
+//      "DownstreamScheme": "http",
+//      "DownstreamHostAndPorts": [
+//        {
+//          "Host": "user-service",
+//          "Port": 80
+//        }
+//      ],
+//      "RateLimitOptions": {
+//         "EnableRateLimiting": false
+//      }
+//    },
+//    {
+//      "Key": "user-swagger-v2",
+//      "UpstreamPathTemplate": "/swagger-docs/user/v2/swagger.json",
+//      "UpstreamHttpMethod": [ "GET" ],
+//      "DownstreamPathTemplate": "/swagger/v2/swagger.json",
+//      "DownstreamScheme": "http",
+//      "DownstreamHostAndPorts": [
+//        {
+//          "Host": "user-service",
+//          "Port": 80
+//        }
+//      ],
+//      "RateLimitOptions": {
+//         "EnableRateLimiting": false
+//      }
+//    },
+//    {
+//      "Key": "notes-swagger-v1",
+//      "UpstreamPathTemplate": "/swagger-docs/notes/v1/swagger.json",
+//      "UpstreamHttpMethod": [ "GET" ],
+//      "DownstreamPathTemplate": "/swagger/v1/swagger.json",
+//      "DownstreamScheme": "http",
+//      "DownstreamHostAndPorts": [
+//        {
+//          "Host": "notes-service",
+//          "Port": 80
+//        }
+//      ],
+//      "RateLimitOptions": {
+//         "EnableRateLimiting": false
+//      }
+//    }
+//  ],
+//  "GlobalConfiguration": {
+//    "BaseUrl": "https://localhost:7000",
+//    "RateLimitOptions": {
+//      "ClientIdHeader": "ClientId"
+//    }
+//  }
+//}
+
+
 {
   "Routes": [
     {
@@ -6,11 +123,11 @@
       "UpstreamPathTemplate": "/api/v{version}/auth/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ],
       "DownstreamPathTemplate": "/api/v{version}/auth/{everything}",
-      "DownstreamScheme": "http",
+      "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "user-service",
-          "Port": 80
+          "Host": "localhost",
+          "Port": 7001
         }
       ],
       "RateLimitOptions": {
@@ -25,11 +142,11 @@
       "UpstreamPathTemplate": "/api/notes/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ],
       "DownstreamPathTemplate": "/api/notes/{everything}",
-      "DownstreamScheme": "http",
+      "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "notes-service",
-          "Port": 80
+          "Host": "localhost",
+          "Port": 7002
         }
       ],
       "RateLimitOptions": {
@@ -44,11 +161,11 @@
       "UpstreamPathTemplate": "/api/labels/{everything}",
       "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ],
       "DownstreamPathTemplate": "/api/labels/{everything}",
-      "DownstreamScheme": "http",
+      "DownstreamScheme": "https",
       "DownstreamHostAndPorts": [
         {
-          "Host": "notes-service",
-          "Port": 80
+          "Host": "localhost",
+          "Port": 7002
         }
       ],
       "RateLimitOptions": {
@@ -56,54 +173,6 @@
         "Period": "1m",
         "Limit": 5,
         "Wait": "1m"
-      }
-    },
-    {
-      "Key": "user-swagger-v1",
-      "UpstreamPathTemplate": "/swagger-docs/user/v1/swagger.json",
-      "UpstreamHttpMethod": [ "GET" ],
-      "DownstreamPathTemplate": "/swagger/v1/swagger.json",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "user-service",
-          "Port": 80
-        }
-      ],
-      "RateLimitOptions": {
-         "EnableRateLimiting": false
-      }
-    },
-    {
-      "Key": "user-swagger-v2",
-      "UpstreamPathTemplate": "/swagger-docs/user/v2/swagger.json",
-      "UpstreamHttpMethod": [ "GET" ],
-      "DownstreamPathTemplate": "/swagger/v2/swagger.json",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "user-service",
-          "Port": 80
-        }
-      ],
-      "RateLimitOptions": {
-         "EnableRateLimiting": false
-      }
-    },
-    {
-      "Key": "notes-swagger-v1",
-      "UpstreamPathTemplate": "/swagger-docs/notes/v1/swagger.json",
-      "UpstreamHttpMethod": [ "GET" ],
-      "DownstreamPathTemplate": "/swagger/v1/swagger.json",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "notes-service",
-          "Port": 80
-        }
-      ],
-      "RateLimitOptions": {
-         "EnableRateLimiting": false
       }
     }
   ],

@@ -281,6 +281,37 @@ namespace Fundoo.Notes.Application.Services
             return deleted;
         }
 
+        public async Task<bool?> AddCollaboratorAsync(Guid noteId, Guid ownerUserId, Guid collaboratorUserId,
+            CancellationToken cancellationToken = default)
+        {
+            if (ownerUserId == collaboratorUserId)
+                return false;
+
+            var result = await _notesRepository.AddCollaboratorAsync(noteId, ownerUserId, collaboratorUserId, cancellationToken);
+            if (result == true)
+            {
+                await InvalidateCacheAsync(ownerUserId, noteId, cancellationToken);
+                await InvalidateCacheAsync(collaboratorUserId, noteId, cancellationToken);
+            }
+            return result;
+        }
+
+        public Task<IReadOnlyList<Guid>?> GetCollaboratorsAsync(Guid noteId, Guid ownerUserId,
+            CancellationToken cancellationToken = default) =>
+            _notesRepository.GetCollaboratorsAsync(noteId, ownerUserId, cancellationToken);
+
+        public async Task<bool> RemoveCollaboratorAsync(Guid noteId, Guid ownerUserId, Guid collaboratorUserId,
+            CancellationToken cancellationToken = default)
+        {
+            var removed = await _notesRepository.RemoveCollaboratorAsync(noteId, ownerUserId, collaboratorUserId, cancellationToken);
+            if (removed)
+            {
+                await InvalidateCacheAsync(ownerUserId, noteId, cancellationToken);
+                await InvalidateCacheAsync(collaboratorUserId, noteId, cancellationToken);
+            }
+            return removed;
+        }
+
         // READ FROM CACHE
         private async Task<T?> GetFromCacheAsync<T>(
             string key,

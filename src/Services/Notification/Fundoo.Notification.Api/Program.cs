@@ -1,10 +1,16 @@
 using Fundoo.Notification.Api.Messaging;
 using Fundoo.Notification.Api.Services;
 using Fundoo.Notification.Application.Abstractions;
+using Fundoo.Observability;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddFundooObservability(
+    builder.Configuration,
+    builder.Environment,
+    "fundoo-notification-api");
+
 
 // Register controllers.
 builder.Services.AddControllers();

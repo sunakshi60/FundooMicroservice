@@ -26,7 +26,9 @@ namespace Fundoo.Notes.Application.Repositories
                created_at_utc, updated_at_utc
         FROM notes
         WHERE id = @noteId
-          AND user_id = @userId;
+          AND (user_id = @userId OR EXISTS (
+              SELECT 1 FROM note_collaborators nc
+              WHERE nc.note_id = notes.id AND nc.collaborator_user_id = @userId));
         """;
 
             await using var connection = _connectionFactory.CreateConnection();
@@ -64,7 +66,7 @@ namespace Fundoo.Notes.Application.Repositories
                        is_pinned, is_archived, is_trashed,
                        created_at_utc, updated_at_utc
                 FROM notes
-                WHERE user_id = @userId
+                WHERE (user_id = @userId OR EXISTS (SELECT 1 FROM note_collaborators nc WHERE nc.note_id = notes.id AND nc.collaborator_user_id = @userId))
                 ORDER BY created_at_utc DESC;
                 """;
 
@@ -80,7 +82,7 @@ namespace Fundoo.Notes.Application.Repositories
                        is_pinned, is_archived, is_trashed,
                        created_at_utc, updated_at_utc
                 FROM notes
-                WHERE user_id = @userId
+                WHERE (user_id = @userId OR EXISTS (SELECT 1 FROM note_collaborators nc WHERE nc.note_id = notes.id AND nc.collaborator_user_id = @userId))
                   AND is_archived = FALSE
                   AND is_trashed = FALSE
                 ORDER BY is_pinned DESC, created_at_utc DESC;
@@ -99,7 +101,7 @@ namespace Fundoo.Notes.Application.Repositories
                        is_pinned, is_archived, is_trashed,
                        created_at_utc, updated_at_utc
                 FROM notes
-                WHERE user_id = @userId
+                WHERE (user_id = @userId OR EXISTS (SELECT 1 FROM note_collaborators nc WHERE nc.note_id = notes.id AND nc.collaborator_user_id = @userId))
                   AND is_archived = TRUE
                   AND is_trashed = FALSE
                 ORDER BY updated_at_utc DESC;
@@ -118,7 +120,7 @@ namespace Fundoo.Notes.Application.Repositories
                        is_pinned, is_archived, is_trashed,
                        created_at_utc, updated_at_utc
                 FROM notes
-                WHERE user_id = @userId
+                WHERE (user_id = @userId OR EXISTS (SELECT 1 FROM note_collaborators nc WHERE nc.note_id = notes.id AND nc.collaborator_user_id = @userId))
                   AND is_trashed = TRUE
                 ORDER BY updated_at_utc DESC;
                 """;
@@ -268,6 +270,80 @@ namespace Fundoo.Notes.Application.Repositories
 
             return rowsAffected > 0;
         }
+
+        public async Task<bool?> AddCollaboratorAsync(Guid noteId, Guid ownerUserId, Guid collaboratorUserId,
+            CancellationToken cancellationToken = default)
+        {
+            await using var connection = _connectionFactory.CreateConnection();
+            await connection.OpenAsync(cancellationToken);
+
+            const string existsSql = "SELECT EXISTS (SELECT 1 FROM notes WHERE id = @noteId AND user_id = @ownerUserId);";
+            await using (var existsCommand = new NpgsqlCommand(existsSql, connection))
+            {
+                existsCommand.Parameters.AddWithValue("noteId", noteId);
+                existsCommand.Parameters.AddWithValue("ownerUserId", ownerUserId);
+                if (!(bool)(await existsCommand.ExecuteScalarAsync(cancellationToken) ?? false))
+                    return null;
+            }
+
+            const string insertSql = """
+                INSERT INTO note_collaborators (note_id, collaborator_user_id, created_at_utc)
+                VALUES (@noteId, @collaboratorUserId, @createdAtUtc)
+                ON CONFLICT (note_id, collaborator_user_id) DO NOTHING;
+                """;
+            await using var command = new NpgsqlCommand(insertSql, connection);
+            command.Parameters.AddWithValue("noteId", noteId);
+            command.Parameters.AddWithValue("collaboratorUserId", collaboratorUserId);
+            command.Parameters.AddWithValue("createdAtUtc", DateTime.UtcNow);
+            return await command.ExecuteNonQueryAsync(cancellationToken) > 0;
+        }
+
+        public async Task<IReadOnlyList<Guid>?> GetCollaboratorsAsync(Guid noteId, Guid ownerUserId,
+            CancellationToken cancellationToken = default)
+        {
+            await using var connection = _connectionFactory.CreateConnection();
+            await connection.OpenAsync(cancellationToken);
+            const string existsSql = "SELECT EXISTS (SELECT 1 FROM notes WHERE id = @noteId AND user_id = @ownerUserId);";
+            await using (var existsCommand = new NpgsqlCommand(existsSql, connection))
+            {
+                existsCommand.Parameters.AddWithValue("noteId", noteId);
+                existsCommand.Parameters.AddWithValue("ownerUserId", ownerUserId);
+                if (!(bool)(await existsCommand.ExecuteScalarAsync(cancellationToken) ?? false))
+                    return null;
+            }
+
+            const string sql = """
+                SELECT collaborator_user_id
+                FROM note_collaborators nc
+                WHERE nc.note_id = @noteId
+                ORDER BY nc.created_at_utc;
+                """;
+            await using var command = new NpgsqlCommand(sql, connection);
+            command.Parameters.AddWithValue("noteId", noteId);
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            var ids = new List<Guid>();
+            while (await reader.ReadAsync(cancellationToken)) ids.Add(reader.GetGuid(0));
+            return ids;
+        }
+
+        public async Task<bool> RemoveCollaboratorAsync(Guid noteId, Guid ownerUserId, Guid collaboratorUserId,
+            CancellationToken cancellationToken = default)
+        {
+            const string sql = """
+                DELETE FROM note_collaborators nc
+                USING notes n
+                WHERE nc.note_id = n.id AND nc.note_id = @noteId AND n.user_id = @ownerUserId
+                  AND nc.collaborator_user_id = @collaboratorUserId;
+                """;
+            await using var connection = _connectionFactory.CreateConnection();
+            await connection.OpenAsync(cancellationToken);
+            await using var command = new NpgsqlCommand(sql, connection);
+            command.Parameters.AddWithValue("noteId", noteId);
+            command.Parameters.AddWithValue("ownerUserId", ownerUserId);
+            command.Parameters.AddWithValue("collaboratorUserId", collaboratorUserId);
+            return await command.ExecuteNonQueryAsync(cancellationToken) > 0;
+        }
+
         private static async Task LoadLabelsAsync(
             NpgsqlConnection connection,
             IEnumerable<Note> notes,
@@ -291,8 +367,10 @@ namespace Fundoo.Notes.Application.Repositories
                 INNER JOIN labels l ON l.id = nl.label_id
                 INNER JOIN notes n ON n.id = nl.note_id
                 WHERE nl.note_id = ANY(@noteIds)
-                  AND n.user_id = @userId
-                  AND l.user_id = @userId
+                  AND l.user_id = n.user_id
+                  AND (n.user_id = @userId OR EXISTS (
+                      SELECT 1 FROM note_collaborators nc
+                      WHERE nc.note_id = n.id AND nc.collaborator_user_id = @userId))
                 ORDER BY l.name;
                 """;
 

@@ -20,6 +20,63 @@ namespace Fundoo.Notes.Api.Controllers
             _notesService = notesService;
         }
 
+        [HttpPost("{id:guid}/collaborators")]
+        public async Task<IActionResult> AddCollaborator(Guid id, [FromBody] AddCollaboratorRequest request,
+            CancellationToken cancellationToken)
+        {
+            if (!TryGetUserId(out var ownerUserId)) 
+                return Unauthorized(new { message = "Invalid user token." });
+
+            var added = await _notesService.AddCollaboratorAsync(id, ownerUserId, request.UserId, cancellationToken);
+
+            if (added is null) return NotFound(new 
+            { 
+                message = "Note not found." 
+            });
+
+            if (!added.Value) return Conflict(new 
+            {
+                message = "The user is already a collaborator or is the note owner." 
+            });
+
+            return CreatedAtAction(nameof(GetCollaborators), new { id }, new CollaboratorResponse(request.UserId));
+        }
+
+        [HttpGet("{id:guid}/collaborators")]
+        public async Task<IActionResult> GetCollaborators(Guid id, CancellationToken cancellationToken)
+        {
+            if (!TryGetUserId(out var ownerUserId)) 
+                return Unauthorized(new 
+                { 
+                    message = "Invalid user token." 
+                });
+
+            var ids = await _notesService.GetCollaboratorsAsync(id, ownerUserId, cancellationToken);
+
+            return ids is null ? NotFound(new 
+            { 
+                message = "Note not found." 
+            }) : Ok(ids.Select(x => new CollaboratorResponse(x)));
+        }
+
+        [HttpDelete("{id:guid}/collaborators/{collaboratorUserId:guid}")]
+        public async Task<IActionResult> RemoveCollaborator(Guid id, Guid collaboratorUserId,
+            CancellationToken cancellationToken)
+        {
+            if (!TryGetUserId(out var ownerUserId)) 
+                return Unauthorized(new 
+                { 
+                    message = "Invalid user token." 
+                });
+
+            var removed = await _notesService.RemoveCollaboratorAsync(id, ownerUserId, collaboratorUserId, cancellationToken);
+
+            return removed ? NoContent() : NotFound(new 
+            { 
+                message = "Note or collaborator not found." 
+            });
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetActiveNotes(
             CancellationToken cancellationToken)

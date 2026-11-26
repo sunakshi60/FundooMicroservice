@@ -5,8 +5,14 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using Fundoo.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddFundooObservability(
+    builder.Configuration,
+    builder.Environment,
+    "fundoo-notes-api");
+
 
 var notesConnectionString = builder.Configuration.GetConnectionString("NotesDb")
     ?? throw new InvalidOperationException("NotesConnnectionstring is missing");
